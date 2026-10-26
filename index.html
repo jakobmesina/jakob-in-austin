@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light only">
+<meta name="robots" content="noindex,nofollow">
+<title>Jakob in Austin</title>
+<style>
+/* Light only, phone first. Status on top, then one row per checkpoint: blue time, headline, photo on the right. City level only. */
+:root{
+  --bg:#FAFAF8; --card:#FFFFFF; --ink:#14161A; --muted:#5E6470; --line:#E6E4DF;
+  --blue:#0A84FF; --now:#EAF3FF; --done:#9AA0A8;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:var(--sans);font-size:16px;line-height:1.4;-webkit-text-size-adjust:100%}
+.wrap{max-width:560px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right)) 48px max(16px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:24px}
+.nw{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kicker{font-size:14px;font-weight:600;color:var(--blue);margin:0}
+h1{font-size:min(8.5vw,40px);line-height:1.1;font-weight:800;letter-spacing:-0.02em;margin:4px 0 0;color:var(--ink)}
+.when{font-size:14px;color:var(--muted);margin:6px 0 0;font-variant-numeric:tabular-nums}
+.latest{display:flex;flex-direction:column;gap:14px}
+.latest:empty{display:none}
+.latest img{width:100%;height:auto;border-radius:14px;background:var(--line);display:block}
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 14px 14px 16px;min-height:84px}
+.row .txt{flex:1;min-width:0}
+.row .t{font-size:13px;font-weight:600;color:var(--blue);margin:0;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.row .h{font-size:19px;font-weight:700;color:var(--ink);margin:2px 0 0;letter-spacing:-0.01em}
+.row .ph{flex:none;width:64px;height:64px;border-radius:12px;object-fit:cover;background:var(--line);display:block}
+.row.now{background:var(--now);border-color:var(--blue)}
+.row.done .h{color:var(--done)}
+.foot{font-size:13px;color:var(--muted);margin:0}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="kicker nw">Jakob in Austin · where he is now</p>
+    <h1 class="nw" id="now">Jakob in Austin</h1>
+    <p class="when nw" id="nowWhen"></p>
+  </header>
+  <div class="latest" id="latest"></div>
+  <ol class="rows" id="rows"></ol>
+  <p class="foot">Times are local: LA time in LA, Austin time in Austin.</p>
+</main>
+<!-- STATUS:START (sync.sh may replace this block) -->
+<script id="status" type="application/json">{"override":null}</script>
+<!-- STATUS:END -->
+<!-- PHOTOS:START (sync.sh rewrites this list; files live in photos/) -->
+<script id="photos" type="application/json">[]</script>
+<!-- PHOTOS:END -->
+<script>
+(function(){
+var LA="-07:00", AUS="-05:00";
+// Checkpoints in order. id is what a photo's "checkpoint" field points at (id, headline or index all work).
+var STEPS=[
+  {id:"leave-house",      t:"6:15 AM",      at:"2026-10-26T06:15:00"+LA, h:"Leave House"},
+  {id:"at-flyaway",       t:"6:45 AM",      at:"2026-10-26T06:45:00"+LA, h:"At FlyAway"},
+  {id:"flyaway-leaves",   t:"7:00 AM",      at:"2026-10-26T07:00:00"+LA, h:"FlyAway Leaves"},
+  {id:"terminal-3",       t:"~8:00 AM",     at:"2026-10-26T08:00:00"+LA, h:"Terminal 3"},
+  {id:"boarding",         t:"9:33 AM",      at:"2026-10-26T09:33:00"+LA, h:"Boarding"},
+  {id:"fly-to-austin",    t:"10:13 AM",     at:"2026-10-26T10:13:00"+LA, h:"Fly to Austin"},
+  {id:"land-in-austin",   t:"3:21 PM",      at:"2026-10-26T15:21:00"+AUS,h:"Land in Austin"},
+  {id:"check-in",         t:"4:00 PM",      at:"2026-10-26T16:00:00"+AUS,h:"Check In"},
+  {id:"welcome-party",    t:"6:30 PM",      at:"2026-10-26T18:30:00"+AUS,h:"SubQ Welcome Party"},
+  {id:"subq-day-1",       t:"Tue 10:00 AM", at:"2026-10-27T10:00:00"+AUS,h:"SubQ Day 1"},
+  {id:"subq-day-2",       t:"Wed 10:00 AM", at:"2026-10-28T10:00:00"+AUS,h:"SubQ Day 2"},
+  {id:"check-out",        t:"Wed 11:00 AM", at:"2026-10-28T11:00:00"+AUS,h:"Check Out"},
+  {id:"leave-for-airport",t:"Wed 6:15 PM",  at:"2026-10-28T18:15:00"+AUS,h:"Leave for Airport"},
+  {id:"fly-home",         t:"Wed 8:44 PM",  at:"2026-10-28T20:44:00"+AUS,h:"Fly Home"},
+  {id:"land-in-la",       t:"Wed 10:05 PM", at:"2026-10-28T22:05:00"+LA, h:"Land in LA"}
+];
+STEPS.forEach(function(s,i){s.ms=Date.parse(s.at);});
+var status={}, photos=[];
+try{status=JSON.parse(document.getElementById("status").textContent)||{};}catch(e){}
+try{photos=JSON.parse(document.getElementById("photos").textContent)||[];}catch(e){}
+function norm(x){return String(x==null?"":x).toLowerCase().replace(/[^a-z0-9]+/g,"");}
+function stepOf(p){var c=p.checkpoint;if(c==null||c==="")return null;
+  if(typeof c==="number")return STEPS[c]||null;
+  var n=norm(c);for(var i=0;i<STEPS.length;i++){if(norm(STEPS[i].id)===n||norm(STEPS[i].h)===n)return STEPS[i];}return null;}
+function byNewest(a,b){return (Date.parse(b.at)||0)-(Date.parse(a.at)||0);}
+function cur(now){var c=-1;for(var i=0;i<STEPS.length;i++){if(STEPS[i].ms<=now)c=i;}return c;}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
+function img(p,cls,alt){var m=document.createElement("img");if(cls)m.className=cls;m.src="photos/"+encodeURIComponent(p.file);m.alt=alt;m.loading="lazy";return m;}
+function fitH1(){var h=document.getElementById("now");h.style.fontSize="";var f=parseFloat(getComputedStyle(h).fontSize);while(h.scrollWidth>h.clientWidth&&f>18){f-=1;h.style.fontSize=f+"px";}}
+function render(){
+  var now=Date.now(), i=cur(now), h=document.getElementById("now"), w=document.getElementById("nowWhen");
+  if(status.override&&status.override.label){h.textContent=status.override.label;w.textContent=status.override.sub||"";}
+  else if(i<0){h.textContent="Getting Ready in LA";w.textContent="Leaves Monday morning for Austin";}
+  else if(now>STEPS[STEPS.length-1].ms+3*3600e3){h.textContent="Home in LA";w.textContent="Trip done";}
+  else{h.textContent=STEPS[i].h;w.textContent="Since "+STEPS[i].t+" · updates on its own";}
+  // Photos tagged with a checkpoint go on that row (newest wins); untagged ones sit at the top, newest first.
+  var mapped={}, loose=[];
+  photos.slice().sort(byNewest).forEach(function(p){var s=stepOf(p);if(s){if(!mapped[s.id])mapped[s.id]=p;}else loose.push(p);});
+  var lt=document.getElementById("latest");lt.textContent="";
+  loose.forEach(function(p){lt.appendChild(img(p,null,"Photo from Jakob"+(p.label?": "+p.label:"")));});
+  var ol=document.getElementById("rows");ol.textContent="";
+  STEPS.forEach(function(s,k){
+    var li=el("li","row"+(k===i?" now":(k<i?" done":"")));
+    var tx=el("div","txt");tx.appendChild(el("p","t nw",s.t));tx.appendChild(el("p","h nw",s.h));li.appendChild(tx);
+    if(mapped[s.id])li.appendChild(img(mapped[s.id],"ph","Photo: "+s.h));
+    ol.appendChild(li);
+  });
+  fitH1();
+}
+render();setInterval(render,60000);window.addEventListener("resize",fitH1);
+})();
+</script>
+</body>
+</html>
